@@ -8,6 +8,7 @@
             <id property="id" column="id" />
             <result property="userId" column="userId" />
             <result property="goal" column="goal" />
+            <result property="chartName" column="chartName" />
             <result property="chartData" column="chartData" />
             <result property="chartType" column="chartType" />
             <result property="genChart" column="genChart" />
@@ -18,7 +19,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,userId,goal,chartData,chartType,genChart,genResult,
+        id,userId,goal,chartName,chartData,chartType,genChart,genResult,
         createTime,updateTime,isDelete
     </sql>
 </mapper>

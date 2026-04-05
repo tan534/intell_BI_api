@@ -173,6 +173,7 @@ public class UserController {
      * @param request
      * @return
      */
+    @PostMapping("/update")
     @ApiOperation("更新用户")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest,

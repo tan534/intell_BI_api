@@ -11,14 +11,12 @@ import com.intell_BI_backend.constant.CommonConstant;
 import com.intell_BI_backend.constant.UserConstant;
 import com.intell_BI_backend.exception.BusinessException;
 import com.intell_BI_backend.exception.ThrowUtils;
-import com.intell_BI_backend.model.dto.chart.ChartAddRequest;
-import com.intell_BI_backend.model.dto.chart.ChartEditRequest;
-import com.intell_BI_backend.model.dto.chart.ChartQueryRequest;
-import com.intell_BI_backend.model.dto.chart.ChartUpdateRequest;
+import com.intell_BI_backend.model.dto.chart.*;
 import com.intell_BI_backend.model.entity.Chart;
 import com.intell_BI_backend.model.entity.User;
 import com.intell_BI_backend.service.ChartService;
 import com.intell_BI_backend.service.UserService;
+import com.intell_BI_backend.utils.ExcelUtils;
 import com.intell_BI_backend.utils.SqlUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -26,10 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-
 
 /**
  * 图表接口
@@ -77,7 +75,7 @@ public class ChartController {
      * @param request
      * @return
      */
-    @DeleteMapping("/delete")
+    @PostMapping("/delete")
     @ApiOperation("删除图表")
     public BaseResponse<Boolean> deleteChart(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
@@ -102,7 +100,7 @@ public class ChartController {
      * @param chartUpdateRequest
      * @return
      */
-    @PutMapping("/update")
+    @PostMapping("/update")
     @ApiOperation("更新图表")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateChart(@RequestBody ChartUpdateRequest chartUpdateRequest) {
@@ -144,7 +142,7 @@ public class ChartController {
      * @param chartQueryRequest
      * @return
      */
-    @GetMapping("/list/page")
+    @PostMapping("/list/page")
 
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<Chart>> listChartByPage(@RequestBody ChartQueryRequest chartQueryRequest) {
@@ -162,7 +160,7 @@ public class ChartController {
      * @param request
      * @return
      */
-    @GetMapping("/my/list/page")
+    @PostMapping("/my/list/page")
     public BaseResponse<Page<Chart>> listMyChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
             HttpServletRequest request) {
         if (chartQueryRequest == null) {
@@ -186,7 +184,7 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PutMapping("/edit")
+    @PostMapping("/edit")
     public BaseResponse<Boolean> editChart(@RequestBody ChartEditRequest chartEditRequest, HttpServletRequest request) {
         if (chartEditRequest == null || chartEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -219,6 +217,7 @@ public class ChartController {
         }
 
         Long id = chartQueryRequest.getId();
+        String chartName = chartQueryRequest.getChartName();
         String goal = chartQueryRequest.getGoal();
         String chartType = chartQueryRequest.getChartType();
         Long userId = chartQueryRequest.getUserId();
@@ -227,6 +226,7 @@ public class ChartController {
 
         queryWrapper.eq(id != null && id > 0, "id", id);
         queryWrapper.like(StringUtils.isNotBlank(goal), "goal", goal);
+        queryWrapper.like(StringUtils.isNotBlank(chartName), "chartName", chartName);
         queryWrapper.like(StringUtils.isNotBlank(chartType), "chartType", chartType);
         queryWrapper.eq(userId != null && userId > 0, "userId", userId);
         queryWrapper.eq("isDelete",false);
@@ -234,5 +234,37 @@ public class ChartController {
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
+    }
+
+
+
+    /**
+     * 获取用户上传文件并智能分析
+     *
+     * @param multipartFile
+     * @param genChartByAiRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen")
+    @ApiOperation("AI生成图表")
+    private BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile, GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+
+        String chartName = genChartByAiRequest.getChartName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
+        // 校验
+        ThrowUtils.throwIf(StringUtils.isBlank(chartName), ErrorCode.PARAMS_ERROR, "图表名称不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
+
+        //获取用户输入的分析目标
+        StringBuilder Goal = new StringBuilder();
+        Goal.append("分析目标：").append(goal).append("\n");
+        // 文件转换为csv
+        String result= ExcelUtils.excelToCsv(multipartFile);
+        Goal.append("参考数据如下：").append(result).append("\n");
+        return ResultUtils.success(Goal.toString());
+
     }
 }
