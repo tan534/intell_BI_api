@@ -1,5 +1,6 @@
 package com.intell_BI_backend.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.intell_BI_backend.annotation.AuthCheck;
@@ -15,6 +16,7 @@ import com.intell_BI_backend.model.dto.chart.*;
 import com.intell_BI_backend.model.entity.Chart;
 import com.intell_BI_backend.model.entity.User;
 import com.intell_BI_backend.service.ChartService;
+import com.intell_BI_backend.service.DeepSeekService;
 import com.intell_BI_backend.service.UserService;
 import com.intell_BI_backend.utils.ExcelUtils;
 import com.intell_BI_backend.utils.SqlUtils;
@@ -45,6 +47,8 @@ public class ChartController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private DeepSeekService deepSeekService;
     /**
      * 创建
      *
@@ -239,32 +243,33 @@ public class ChartController {
 
 
     /**
-     * 获取用户上传文件并智能分析
+     * 获取用户上传文件并 AI 智能分析 → 直接返回 ECharts 可使用的 JSON
      *
      * @param multipartFile
      * @param genChartByAiRequest
-     * @param request
      * @return
      */
     @PostMapping("/gen")
-    @ApiOperation("AI生成图表")
-    private BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile, GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
-
+    @ApiOperation("AI 图表分析接口")
+    public BaseResponse<JSONObject> genChartByAi(@RequestPart("file") MultipartFile multipartFile, GenChartByAiRequest genChartByAiRequest
+    ) {
+        //获取参数
         String chartName = genChartByAiRequest.getChartName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
-        // 校验
+        //校验参数
         ThrowUtils.throwIf(StringUtils.isBlank(chartName), ErrorCode.PARAMS_ERROR, "图表名称不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
+        //Excel转CSV字符串（带表头：日期、用户数）
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        //拼接给AI的完整指令
+        String prompt = "分析目标：" + goal + "\n"
+                + "图表类型：" + chartType + "\n"
+                + "数据如下：\n" + csvData;
+        //调用 DeepSeek分析返回JSON
+        JSONObject aiResult = deepSeekService.analyzeCsv(prompt);
 
-        //获取用户输入的分析目标
-        StringBuilder Goal = new StringBuilder();
-        Goal.append("分析目标：").append(goal).append("\n");
-        // 文件转换为csv
-        String result= ExcelUtils.excelToCsv(multipartFile);
-        Goal.append("参考数据如下：").append(result).append("\n");
-        return ResultUtils.success(Goal.toString());
-
+        return ResultUtils.success(aiResult);
     }
 }
