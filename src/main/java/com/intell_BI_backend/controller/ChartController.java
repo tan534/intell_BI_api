@@ -251,9 +251,17 @@ public class ChartController {
      */
     @PostMapping("/gen")
     @ApiOperation("AI 图表分析接口")
-    public BaseResponse<JSONObject> genChartByAi(@RequestPart("file") MultipartFile multipartFile, GenChartByAiRequest genChartByAiRequest
-    ) {
+    public BaseResponse<JSONObject> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+                                                 GenChartByAiRequest genChartByAiRequest,
+                                                 HttpServletRequest request) {
+        // 校验文件格式
+        String filename = multipartFile.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "上传失败,仅支持.xlsx和.xls格式文件,请重新上传！");
+        }
+
         //获取参数
+        User loginUser = userService.getLoginUser(request);
         String chartName = genChartByAiRequest.getChartName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
@@ -261,7 +269,7 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(chartName), ErrorCode.PARAMS_ERROR, "图表名称不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
-        //Excel转CSV字符串（带表头：日期、用户数）
+        //Excel转CSV字符串
         String csvData = ExcelUtils.excelToCsv(multipartFile);
         //拼接给AI的完整指令
         String prompt = "分析目标：" + goal + "\n"
@@ -270,6 +278,47 @@ public class ChartController {
         //调用 DeepSeek分析返回JSON
         JSONObject aiResult = deepSeekService.analyzeCsv(prompt);
 
-        return ResultUtils.success(aiResult);
+        //分离生成的图表和分析结论
+        String genChart= aiResult.getString("genChart");
+        String genChartStr = cleanEchartsJsToJson(genChart);
+        String genResult = aiResult.getString("genResult");
+
+        //将图表信息插入数据库
+        Chart chart = new Chart();
+        chart.setChartName(chartName);
+        chart.setChartType(chartType);
+        chart.setGoal(goal);
+        chart.setUserId(loginUser.getId());
+        chart.setChartData(csvData);
+        chart.setGenChart(genChartStr);
+        chart.setGenResult(genResult);
+        boolean result = chartService.save(chart);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图表信息保存失败！");
+
+        JSONObject responseData = new JSONObject();
+        responseData.put("genChartStr", genChartStr);
+        responseData.put("genResult", genResult);
+
+        return ResultUtils.success(responseData);
+    }
+    private String cleanEchartsJsToJson(String echartsJs) {
+        if (StringUtils.isBlank(echartsJs)) {
+            return "{}"; // 空值返回空JSON对象
+        }
+        // 步骤1：去掉 "option = " 赋值语句
+        String jsonStr = echartsJs.replaceAll("option\\s*=\\s*", "");
+        // 步骤2：去掉末尾的分号/逗号
+        jsonStr = jsonStr.replaceAll(";$", "").replaceAll(",\\s*}$", "}");
+        // 步骤3：单引号转双引号（JSON要求双引号）
+        jsonStr = jsonStr.replace("'", "\"");
+        // 步骤4：去掉多余的换行/空格（可选，提升稳定性）
+        jsonStr = jsonStr.replaceAll("\\n|\\r", "").trim();
+        // 步骤5：兜底（确保是合法JSON）
+        try {
+            JSONObject.parseObject(jsonStr); // 验证JSON合法性
+            return jsonStr;
+        } catch (Exception e) {
+            return "{}"; // 解析失败返回空JSON
+        }
     }
 }

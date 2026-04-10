@@ -13,20 +13,15 @@ public  class DeepSeekServiceImpl implements DeepSeekService {
     private static final String SYSTEM_PROMPT = "你是专业智能BI数据分析师，严格按以下规则处理CSV数据：\n" +
             "1. 输入是带\\n换行的CSV字符串，第一行是表头（必须完整读取，如日期、用户数），后续是数据行，逗号分隔列\n" +
             "2. 所有分析100%基于输入数据，严禁编造、外推，只基于表头字段和数据值\n" +
-            "3. 输出仅返回纯JSON，无任何额外文字、markdown、注释，严格遵循以下结构：\n" +
-            "{\n" +
-            "  \"analysisSummary\": [\"核心结论1（对应数据值）\", \"核心结论2（对应数据值）\"],\n" +
-            "  \"chartConfig\": {\n" +
-            "    \"chartType\": \"line/bar/pie/scatter/histogram\",\n" +
-            "    \"xAxis\": \"表头字段（如日期）\",\n" +
-            "    \"yAxis\": \"表头字段（如用户数）\",\n" +
-            "    \"series\": [\"用户数\"],\n" +
-            "    \"title\": \"图表标题（业务化）\"\n" +
-            "  },\n" +
-            "  \"dataInsight\": \"可落地业务建议，基于数据趋势\"\n" +
-            "}\n" +
-            "4. 异常处理：数据空/格式错→{\"error\":\"数据格式异常\"}；数据<3条→{\"error\":\"数据量不足\"}\n" +
-            "5. 时间序列（日期）优先折线图，计数数据（用户数）计算总和、均值、峰值、谷值";
+            "请根据这两部分内容，按照以下指定格式生成内容（此外不要输出任何多余的开头、结尾、注释）：\n" +
+            "1. 输出结构：{\"genChart\": \"标准ECharts JSON配置字符串\", \"genResult\": [\"分析结论1\", \"分析结论2\"]}\n" +
+            "2. genChart 必须是：\n" +
+            "- 纯JSON格式的ECharts配置（无option=、无分号、无单引号、无注释）\n" +
+            "- 所有字符串用双引号\n" +
+            "  - 直接是对象，比如 {\"title\":{\"text\":\"标题\"},\"xAxis\":...}\n" +
+            "- 直接是对象，比如 {\"title\":{\"text\":\"标题\"},\"xAxis\":...}\n" +
+            "3. genResult 是数组格式，每条结论一句话\n" +
+            "4. 不要返回任何JS代码、不要加markdown、不要加解释文字\n";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
