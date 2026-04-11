@@ -24,7 +24,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,28 +48,6 @@ public class ChartController {
 
     @Resource
     private DeepSeekService deepSeekService;
-    /**
-     * 创建
-     *
-     * @param chartAddRequest
-     * @param request
-     * @return
-     */
-    @PostMapping("/add")
-    @ApiOperation("创建图表")
-    public BaseResponse<Long> addChart(@RequestBody ChartAddRequest chartAddRequest, HttpServletRequest request) {
-        if (chartAddRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        Chart chart = new Chart();
-        BeanUtils.copyProperties(chartAddRequest, chart);
-        User loginUser = userService.getLoginUser(request);
-        chart.setUserId(loginUser.getId());
-        boolean result = chartService.save(chart);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        long newChartId = chart.getId();
-        return ResultUtils.success(newChartId);
-    }
 
     /**
      * 删除
@@ -96,29 +73,6 @@ public class ChartController {
         }
         boolean b = chartService.removeById(id);
         return ResultUtils.success(b);
-    }
-
-    /**
-     * 更新（仅管理员）
-     *
-     * @param chartUpdateRequest
-     * @return
-     */
-    @PostMapping("/update")
-    @ApiOperation("更新图表")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updateChart(@RequestBody ChartUpdateRequest chartUpdateRequest) {
-        if (chartUpdateRequest == null || chartUpdateRequest.getId() <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        Chart chart = new Chart();
-        BeanUtils.copyProperties(chartUpdateRequest, chart);
-        long id = chartUpdateRequest.getId();
-        // 判断是否存在
-        Chart oldChart = chartService.getById(id);
-        ThrowUtils.throwIf(oldChart == null, ErrorCode.NOT_FOUND_ERROR);
-        boolean result = chartService.updateById(chart);
-        return ResultUtils.success(result);
     }
 
     /**
@@ -181,31 +135,68 @@ public class ChartController {
         return ResultUtils.success(chartPage);
     }
 
+
     /**
-     * 编辑（用户）
+     * 更新
      *
-     * @param chartEditRequest
+     * @param chartParams
      * @param request
      * @return
      */
-    @PostMapping("/edit")
-    public BaseResponse<Boolean> editChart(@RequestBody ChartEditRequest chartEditRequest, HttpServletRequest request) {
-        if (chartEditRequest == null || chartEditRequest.getId() <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        Chart chart = new Chart();
-        BeanUtils.copyProperties(chartEditRequest, chart);
+    @ApiOperation("更改图表接口")
+    @PostMapping("/update")
+    public BaseResponse<Chart> updateChart(
+            @RequestBody ChartUpdateRequest chartParams,
+            HttpServletRequest request
+    ) {
+        // 1. 获取登录用户
         User loginUser = userService.getLoginUser(request);
-        long id = chartEditRequest.getId();
-        // 判断是否存在
-        Chart oldChart = chartService.getById(id);
-        ThrowUtils.throwIf(oldChart == null, ErrorCode.NOT_FOUND_ERROR);
-        // 仅本人或管理员可编辑
-        if (!oldChart.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+
+        // 2. 校验参数
+        ThrowUtils.throwIf(chartParams.getId() == null, ErrorCode.PARAMS_ERROR, "图表ID不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartParams.getGoal()), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
+
+        // 3. 查询旧图表
+        Chart oldChart = chartService.getById(chartParams.getId());
+        ThrowUtils.throwIf(oldChart == null, ErrorCode.NOT_FOUND_ERROR, "图表不存在");
+
+        // 4. 仅本人可修改
+        if (!oldChart.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "你没有权限修改此图表");
         }
-        boolean result = chartService.updateById(chart);
-        return ResultUtils.success(result);
+
+        // 5. 重新构建Prompt
+        String goal = chartParams.getGoal();
+        String chartType = chartParams.getChartType();
+        String csvData = oldChart.getChartData(); // 保留原数据
+
+        String prompt = "分析目标：" + goal + "\n"
+                + "图表类型：" + chartType + "\n"
+                + "数据如下：\n" + csvData;
+
+        // 6. 调用AI重新生成
+        JSONObject aiResult = deepSeekService.analyzeCsv(prompt);
+        ThrowUtils.throwIf(aiResult == null, ErrorCode.SYSTEM_ERROR, "AI分析失败");
+
+        // 7. 清洗图表配置
+        String genChartJs = aiResult.getString("genChart");
+        String genChartStr = cleanEchartsJsToJson(genChartJs);
+        String genResult = aiResult.getString("genResult");
+
+        // 8. 构建更新对象
+        Chart updateChart = new Chart();
+        updateChart.setId(oldChart.getId());
+        updateChart.setGoal(goal);
+        updateChart.setChartName(chartParams.getChartName());
+        updateChart.setChartType(chartType);
+        updateChart.setGenChart(genChartStr);
+        updateChart.setGenResult(genResult);
+
+        // 9. 执行更新
+        boolean success = chartService.updateById(updateChart);
+        ThrowUtils.throwIf(!success, ErrorCode.OPERATION_ERROR, "图表更新失败");
+
+        return ResultUtils.success(updateChart);
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.intell_BI_backend.mapper;
 
-import com.intell_BI_backend.model.entity.Post;
 import java.util.Date;
 import java.util.List;
 import javax.annotation.Resource;

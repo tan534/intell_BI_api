@@ -14,13 +14,12 @@ public  class DeepSeekServiceImpl implements DeepSeekService {
             "1. 输入是带\\n换行的CSV字符串，第一行是表头（必须完整读取，如日期、用户数），后续是数据行，逗号分隔列\n" +
             "2. 所有分析100%基于输入数据，严禁编造、外推，只基于表头字段和数据值\n" +
             "请根据这两部分内容，按照以下指定格式生成内容（此外不要输出任何多余的开头、结尾、注释）：\n" +
-            "1. 输出结构：{\"genChart\": \"标准ECharts JSON配置字符串\", \"genResult\": [\"分析结论1\", \"分析结论2\"]}\n" +
+            "1. 输出结构：{\"genChart\": \"标准ECharts JSON配置字符串\", \"genResult\": [\"分析结论\", \"分析建议\"]}\n" +
             "2. genChart 必须是：\n" +
             "- 纯JSON格式的ECharts配置（无option=、无分号、无单引号、无注释）\n" +
             "- 所有字符串用双引号\n" +
-            "  - 直接是对象，比如 {\"title\":{\"text\":\"标题\"},\"xAxis\":...}\n" +
             "- 直接是对象，比如 {\"title\":{\"text\":\"标题\"},\"xAxis\":...}\n" +
-            "3. genResult 是数组格式，每条结论一句话\n" +
+            "3. genResult 是数组格式，每条结论一句话（20-50字）\n" +
             "4. 不要返回任何JS代码、不要加markdown、不要加解释文字\n";
 
     private final RestTemplate restTemplate = new RestTemplate();

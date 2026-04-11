@@ -2,7 +2,6 @@ package com.intell_BI_backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.intell_BI_backend.model.entity.Post;
 
 import javax.annotation.Resource;
 
