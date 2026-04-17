@@ -13,7 +13,7 @@ public class ExcelUtils {
     private static final ThreadLocal<StringBuilder> SB_CACHE = ThreadLocal.withInitial(() -> new StringBuilder(8192));
 
     /**
-     * Excel 转 CSV 字符串（智能 BI 专用，包含表头！）
+     * Excel 转 CSV 字符串
      * 优化点：
      * 1. 流式处理，避免内存溢出
      * 2. ThreadLocal 复用 StringBuilder

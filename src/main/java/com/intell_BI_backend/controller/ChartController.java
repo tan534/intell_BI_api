@@ -12,6 +12,7 @@ import com.intell_BI_backend.constant.CommonConstant;
 import com.intell_BI_backend.constant.UserConstant;
 import com.intell_BI_backend.exception.BusinessException;
 import com.intell_BI_backend.exception.ThrowUtils;
+import com.intell_BI_backend.manager.RedisLimitManager;
 import com.intell_BI_backend.model.dto.chart.*;
 import com.intell_BI_backend.model.entity.Chart;
 import com.intell_BI_backend.model.entity.User;
@@ -48,6 +49,9 @@ public class ChartController {
 
     @Resource
     private DeepSeekService deepSeekService;
+
+    @Resource
+    private RedisLimitManager redisLimitManager;
 
     /**
      * 删除
@@ -260,6 +264,10 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(chartName), ErrorCode.PARAMS_ERROR, "图表名称不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
         ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
+
+        //限流校验
+        redisLimitManager.doRateLimit("gen_chart:"+loginUser.getId());
+
         //Excel转CSV字符串
         String csvData = ExcelUtils.excelToCsv(multipartFile);
         //拼接给AI的完整指令
@@ -292,6 +300,13 @@ public class ChartController {
 
         return ResultUtils.success(responseData);
     }
+
+    /**
+     * 清洗 Echarts 图表配置
+     *
+     * @param echartsJs
+     * @return
+     */
     private String cleanEchartsJsToJson(String echartsJs) {
         if (StringUtils.isBlank(echartsJs)) {
             return "{}"; // 空值返回空JSON对象

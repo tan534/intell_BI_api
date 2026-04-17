@@ -1,181 +1,174 @@
-# SpringBoot 项目初始模板
+智能数据可视化BI平台README
+📊 智能数据可视化BI平台（Intelligent BI Project）
+一款集数据接入、数据清洗、可视化分析、智能洞察于一体的轻量级智能BI工具，旨在降低数据分析门槛，帮助用户快速将原始数据转化为可决策的可视化报告，支持多场景数据驱动决策，适配个人、中小企业及团队级数据分析需求。
 
-> 作者：[程序员鱼皮](https://github.com/liyupi)
-> 仅分享于 [编程导航知识星球](https://yupi.icu)
+✨ 项目亮点
 
-基于 Java SpringBoot 的项目初始模板，整合了常用框架和主流业务的示例代码。
+- 智能高效：内置自动数据清洗、字段匹配、异常值检测功能，无需专业数据技能，一键完成数据预处理。
 
-只需 1 分钟即可完成内容网站的后端！！！大家还可以在此基础上快速开发自己的项目。
+- 丰富可视化：支持折线图、柱状图、饼图、热力图、仪表盘等10+可视化图表，拖拽式配置，灵活生成个性化报告。
 
-[toc]
+- 多源数据接入：兼容Excel、CSV、MySQL、PostgreSQL、MongoDB等多种数据来源，支持本地文件上传和数据库直连。
 
-## 模板特点
+- 智能洞察：基于算法自动识别数据趋势、异常点、关联关系，生成数据解读和决策建议。
 
-### 主流框架 & 特性
+- 轻量易部署：前后端分离架构，支持Docker一键部署，无需复杂环境配置，快速落地使用。
 
-- Spring Boot 2.7.x（贼新）
-- Spring MVC
-- MyBatis + MyBatis Plus 数据访问（开启分页）
-- Spring Boot 调试工具和项目处理器
-- Spring AOP 切面编程
-- Spring Scheduler 定时任务
-- Spring 事务注解
+- 权限管控：支持多角色权限分配（管理员、分析师、查看者），保障数据安全和操作规范。
 
-### 数据存储
+📋 功能模块
 
-- MySQL 数据库
-- Redis 内存数据库
-- Elasticsearch 搜索引擎
-- 腾讯云 COS 对象存储
+1. 数据接入模块
 
-### 工具类
+- 本地文件上传：支持Excel（.xlsx/.xls）、CSV格式文件导入，自动解析表头和数据类型。
 
-- Easy Excel 表格处理
-- Hutool 工具库
-- Apache Commons Lang3 工具类
-- Lombok 注解
+- 数据库直连：支持MySQL、PostgreSQL、MongoDB等主流数据库，配置连接信息即可同步数据。
 
-### 业务特性
+- 数据刷新：支持手动刷新和定时自动刷新，确保数据实时性。
 
-- 业务代码生成器（支持自动生成 Service、Controller、数据模型代码）
-- Spring Session Redis 分布式登录
-- 全局请求响应拦截器（记录日志）
-- 全局异常处理器
-- 自定义错误码
-- 封装通用响应类
-- Swagger + Knife4j 接口文档
-- 自定义权限注解 + 全局校验
-- 全局跨域处理
-- 长整数丢失精度解决
-- 多环境配置
+2. 数据预处理模块
 
+- 自动清洗：去除空值、重复值、异常值，支持自定义清洗规则。
 
-## 业务功能
+- 字段处理：字段重命名、类型转换（文本→数字→日期等）、字段拆分/合并。
 
-- 提供示例 SQL（用户、帖子、帖子点赞、帖子收藏表）
-- 用户登录、注册、注销、更新、检索、权限管理
-- 帖子创建、删除、编辑、更新、数据库检索、ES 灵活检索
-- 帖子点赞、取消点赞
-- 帖子收藏、取消收藏、检索已收藏帖子
-- 帖子全量同步 ES、增量同步 ES 定时任务
-- 支持微信开放平台登录
-- 支持微信公众号订阅、收发消息、设置菜单
-- 支持分业务的文件上传
+- 数据过滤：支持按条件筛选数据，保留核心分析维度。
 
-### 单元测试
+3. 可视化分析模块
 
-- JUnit5 单元测试
-- 示例单元测试类
+- 拖拽式配置：拖拽字段至画布，自动生成对应图表，支持图表类型切换。
 
-### 架构设计
+- 多图表组合：支持在同一报告页面添加多个图表，自由布局，关联展示数据。
 
-- 合理分层
+- 交互操作：图表支持钻取（下钻至明细数据）、筛选、排序，实时联动更新。
 
+4. 智能洞察模块
 
-## 快速上手
+- 趋势分析：自动识别数据变化趋势（上升/下降/平稳），标注关键拐点。
 
-> 所有需要修改的地方鱼皮都标记了 `todo`，便于大家找到修改的位置~
+- 异常检测：识别数据中的异常值、异常波动，给出可能原因提示。
 
-### MySQL 数据库
+- 关联分析：挖掘不同字段间的关联关系，生成可视化关联图谱和解读。
 
-1）修改 `application.yml` 的数据库配置为你自己的：
+5. 报告管理与分享
 
-```yml
-spring:
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/my_db
-    username: root
-    password: 123456
-```
+- 报告保存：支持报告草稿保存、版本管理，防止操作丢失。
 
-2）执行 `sql/create_table.sql` 中的数据库语句，自动创建库表
+- 导出分享：支持将报告导出为PDF、图片格式，或生成分享链接，便捷协同。
 
-3）启动项目，访问 `http://localhost:8101/api/doc.html` 即可打开接口文档，不需要写前端就能在线调试接口了~
+- 模板复用：支持保存常用报告模板，后续快速复用，提高分析效率。
 
-![](doc/swagger.png)
+6. 系统管理模块
 
-### Redis 分布式登录
+- 用户管理：新增、编辑、删除用户，分配角色和权限。
 
-1）修改 `application.yml` 的 Redis 配置为你自己的：
+- 数据源管理：管理已接入的数据源，编辑连接信息、删除无用数据源。
 
-```yml
-spring:
-  redis:
-    database: 1
-    host: localhost
-    port: 6379
-    timeout: 5000
-    password: 123456
-```
+- 系统设置：配置定时刷新任务、数据存储路径、日志管理等。
 
-2）修改 `application.yml` 中的 session 存储方式：
+📌 技术栈
 
-```yml
-spring:
-  session:
-    store-type: redis
-```
+前端技术栈
 
-3）移除 `MainApplication` 类开头 `@SpringBootApplication` 注解内的 exclude 参数：
+Vue3 + Vite + Element Plus + ECharts + TypeScript + Pinia
 
-修改前：
+后端技术栈
 
-```java
-@SpringBootApplication(exclude = {RedisAutoConfiguration.class})
-```
+Spring Boot + Spring Security + MyBatis-Plus + MySQL + Redis
 
-修改后：
+数据处理与算法
 
+Python（Pandas、NumPy）+ 机器学习算法（异常检测、趋势分析）
 
-```java
-@SpringBootApplication
-```
+部署环境
 
-### Elasticsearch 搜索引擎
+Docker + Nginx + JDK11 + MySQL8.0 + Redis6.0
 
-1）修改 `application.yml` 的 Elasticsearch 配置为你自己的：
+🚀 快速部署
 
-```yml
-spring:
-  elasticsearch:
-    uris: http://localhost:9200
-    username: root
-    password: 123456
-```
+前提条件
 
-2）复制 `sql/post_es_mapping.json` 文件中的内容，通过调用 Elasticsearch 的接口或者 Kibana Dev Tools 来创建索引（相当于数据库建表）
+- 已安装Docker和Docker Compose（推荐版本：Docker 20.10+，Docker Compose 2.0+）。
 
-```
-PUT post_v1
-{
- 参数见 sql/post_es_mapping.json 文件
-}
-```
+- 服务器内存≥4GB，硬盘≥20GB，操作系统支持Linux（推荐CentOS7+/Ubuntu18+）、Windows10/11。
 
-这步不会操作的话需要补充下 Elasticsearch 的知识，或者自行百度一下~
+部署步骤
 
-3）开启同步任务，将数据库的帖子同步到 Elasticsearch
+1. 克隆项目git clone https://github.com/你的用户名/智能BI项目.git
+   cd 智能BI项目
 
-找到 job 目录下的 `FullSyncPostToEs` 和 `IncSyncPostToEs` 文件，取消掉 `@Component` 注解的注释，再次执行程序即可触发同步：
+2. 配置环境变量编辑项目根目录下的.env文件，配置数据库密码、Redis密码、端口等关键信息（参考.env.example）。
 
-```java
-// todo 取消注释开启任务
-//@Component
-```
+3. Docker一键部署# 构建并启动容器
+   docker-compose up -d
 
-### 业务代码生成器
+# 查看容器运行状态
+docker-compose ps
 
-支持自动生成 Service、Controller、数据模型代码，配合 MyBatisX 插件，可以快速开发增删改查等实用基础功能。
+4. 访问系统部署成功后，访问 http://服务器IP:端口（默认端口：8080），默认账号密码：admin/admin123（首次登录请修改密码）。
 
-找到 `generate.CodeGenerator` 类，修改生成参数和生成路径，并且支持注释掉不需要的生成逻辑，然后运行即可。
+📖 使用指南
 
-```
-// 指定生成参数
-String packageName = "com.yupi.springbootinit";
-String dataName = "用户评论";
-String dataKey = "userComment";
-String upperDataKey = "UserComment";
-```
+1. 首次使用流程
 
-生成代码后，可以移动到实际项目中，并且按照 `// todo` 注释的提示来针对自己的业务需求进行修改。
+1. 登录系统，进入【数据源管理】，添加数据源（本地文件上传或数据库直连）。
+
+2. 进入【数据预处理】，选择已添加的数据源，完成数据清洗和字段处理。
+
+3. 进入【可视化分析】，拖拽预处理后的字段，配置图表，生成分析报告。
+
+4. 查看【智能洞察】模块，获取数据解读和决策建议，保存或分享报告。
+
+2. 常见操作说明
+
+- 数据刷新：在数据源详情页，点击【手动刷新】，或配置定时刷新任务（系统管理→定时任务）。
+
+- 图表修改：在可视化报告页，点击图表编辑按钮，可修改图表类型、字段、样式等。
+
+- 权限分配：管理员进入【系统管理→用户管理】，为用户分配角色（分析师可创建报告，查看者仅可查看报告）。
+
+🔧 常见问题（FAQ）
+
+- 问题1：数据源连接失败？解答：检查数据库地址、端口、账号密码是否正确；确保数据库开启远程访问权限；防火墙放行对应端口。
+
+- 问题2：上传文件失败？解答：检查文件格式（仅支持xlsx、xls、csv），文件大小不超过100MB；确保文件表头无特殊字符，数据格式规范。
+
+- 问题3：图表无法显示数据？解答：检查数据预处理是否完成，是否存在空值或异常值；确认图表配置的字段是否正确关联数据源。
+
+- 问题4：系统运行卡顿？解答：检查服务器内存和CPU占用，关闭无用容器；清理Redis缓存（系统管理→缓存管理）；优化数据源查询语句。
+
+📌 开发与贡献
+
+开发环境搭建
+
+1. 前端：进入frontend目录，执行npm install安装依赖，npm run dev启动开发服务器。
+
+2. 后端：导入backend目录下的Maven项目，配置MySQL和Redis连接，启动Spring Boot应用（端口默认8080）。
+
+3. 前后端联调：确保前端请求地址指向后端服务，修改frontend/.env.development中的VUE_APP_BASE_API。
+
+贡献指南
+
+1. Fork本项目到个人仓库。
+
+2. 创建新分支（feature/xxx 或 bugfix/xxx），开发新功能或修复bug。
+
+3. 提交代码前，确保代码格式规范，执行单元测试，无报错。
+
+4. 提交Pull Request，说明修改内容和目的，等待审核。
+
+📄 许可证（License）
+
+本项目采用 Apache License 2.0 许可证，详见 LICENSE 文件。
+
+📞 联系我们
+
+如果您在使用过程中有任何问题、建议或bug反馈，欢迎通过以下方式联系我们：
+
+- GitHub Issues：https://github.com/你的用户名/智能BI项目/issues
+
+- 邮箱：xxx@xxx.com
+
+- 微信：xxx（备注：智能BI项目）
+
+感谢您的使用和支持，期待与您一起完善这个智能BI工具！ 🚀
