@@ -25,6 +25,19 @@ public class Chart {
      */
     private Long userId;
 
+
+    /**
+     * 任务状态
+     */
+    private String Status;
+
+
+    /**
+     * 执行信息
+     */
+    private String Message;
+
+
     /**
      * 分析目标
      */

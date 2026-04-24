@@ -71,6 +71,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             User user = new User();
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
+            user.setUserName(userAccount);
             // 头像默认值(暂时不打算做头像自定义功能)
             user.setUserAvatar("https://javatan.oss-cn-beijing.aliyuncs.com/man01.png");
             boolean saveResult = this.save(user);

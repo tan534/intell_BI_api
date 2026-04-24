@@ -3,13 +3,11 @@ package com.intell_BI_backend.controller;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.intell_BI_backend.annotation.AuthCheck;
 import com.intell_BI_backend.common.BaseResponse;
 import com.intell_BI_backend.common.DeleteRequest;
 import com.intell_BI_backend.common.ErrorCode;
 import com.intell_BI_backend.common.ResultUtils;
 import com.intell_BI_backend.constant.CommonConstant;
-import com.intell_BI_backend.constant.UserConstant;
 import com.intell_BI_backend.exception.BusinessException;
 import com.intell_BI_backend.exception.ThrowUtils;
 import com.intell_BI_backend.manager.RedisLimitManager;
@@ -30,6 +28,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * 图表接口
@@ -52,6 +52,9 @@ public class ChartController {
 
     @Resource
     private RedisLimitManager redisLimitManager;
+
+    @Resource
+    private ThreadPoolExecutor threadPoolExecutor;
 
     /**
      * 删除
@@ -96,23 +99,6 @@ public class ChartController {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
         return ResultUtils.success(chart);
-    }
-
-    /**
-     * 分页获取列表（仅管理员）
-     *
-     * @param chartQueryRequest
-     * @return
-     */
-    @PostMapping("/list/page")
-
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<Chart>> listChartByPage(@RequestBody ChartQueryRequest chartQueryRequest) {
-        long current = chartQueryRequest.getCurrent();
-        long size = chartQueryRequest.getPageSize();
-        Page<Chart> chartPage = chartService.page(new Page<>(current, size),
-                getQueryWrapper(chartQueryRequest));
-        return ResultUtils.success(chartPage);
     }
 
     /**
@@ -235,17 +221,16 @@ public class ChartController {
         return queryWrapper;
     }
 
-
-
     /**
      * 获取用户上传文件并 AI 智能分析 → 直接返回 ECharts 可使用的 JSON
+     *(原同步方式)
      *
      * @param multipartFile
      * @param genChartByAiRequest
      * @return
      */
     @PostMapping("/gen")
-    @ApiOperation("AI 图表分析接口")
+    @ApiOperation("AI 图表分析接口（同步）")
     public BaseResponse<JSONObject> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                                  GenChartByAiRequest genChartByAiRequest,
                                                  HttpServletRequest request) {
@@ -300,6 +285,121 @@ public class ChartController {
 
         return ResultUtils.success(responseData);
     }
+
+    /**
+     * 获取用户上传文件并 AI 智能分析 → 直接返回 ECharts 可使用的 JSON
+     *（新线程池异步方式）
+     *
+     * @param multipartFile
+     * @param genChartByAiRequest
+     * @return
+     */
+    @PostMapping("/gen/async")
+    @ApiOperation("AI 图表分析接口(异步)")
+    public BaseResponse<Long> genChartByAiAsync(@RequestPart("file") MultipartFile multipartFile,
+                                                 GenChartByAiRequest genChartByAiRequest,
+                                                 HttpServletRequest request) {
+        // 校验文件格式
+        String filename = multipartFile.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "上传失败,仅支持.xlsx和.xls格式文件,请重新上传！");
+        }
+
+
+        //获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR);
+
+        //获取参数
+        String chartName = genChartByAiRequest.getChartName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
+
+        //校验参数
+        ThrowUtils.throwIf(StringUtils.isBlank(chartName), ErrorCode.PARAMS_ERROR, "图表名称不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
+
+        //限流校验
+        redisLimitManager.doRateLimit("gen_chart:"+loginUser.getId());
+
+        //Excel转CSV字符串
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        //拼接给AI的完整指令
+        String prompt = "分析目标：" + goal + "\n"
+                + "图表类型：" + chartType + "\n"
+                + "数据如下：\n" + csvData;
+
+        //先将图表基本信息插入数据库
+        Chart chart = new Chart();
+        chart.setChartName(chartName);
+        chart.setChartType(chartType);
+        chart.setGoal(goal);
+        chart.setStatus("wait");
+        chart.setUserId(loginUser.getId());
+        chart.setChartData(csvData);
+
+        boolean result = chartService.save(chart);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图表信息保存失败！");
+
+        //异步执行AI分析
+        CompletableFuture.runAsync(() -> {
+            try {
+                //更新图表生成任务状态为执行中
+                Chart up1chart = new Chart();
+                up1chart.setId(chart.getId());
+                up1chart.setStatus("processing");
+                boolean up1= chartService.updateById(up1chart);
+                if(!up1) {
+                    updateChartError(chart.getId(), "图表状态更新为 “执行中” 失败！");
+                    return;
+                }
+
+                //调用 DeepSeek分析返回JSON
+                JSONObject aiResult = deepSeekService.analyzeCsv(prompt);
+                if(aiResult == null) {
+                    updateChartError(chart.getId(), "AI 生成图表失败！");
+                    return;
+                }
+
+                //分离生成的图表和分析结论
+                String genChart= aiResult.getString("genChart");
+                String genResult = aiResult.getString("genResult");
+
+                //清洗Echarts图表配置
+                String genChartStr = cleanEchartsJsToJson(genChart);
+
+                //更新图表生成任务状态为成功
+                Chart up2Chart = new Chart();
+                up2Chart.setId(chart.getId());
+                up2Chart.setStatus("succeed");
+                up2Chart.setGenChart(genChartStr);
+                up2Chart.setGenResult(genResult);
+                boolean up2= chartService.updateById(up2Chart);
+                if(!up2) {
+                    updateChartError(chart.getId(), "图表状态更新为 “成功” 失败！");
+                }
+            } catch (Exception e) {
+                log.error("AI 分析图表异常", e);
+                updateChartError(chart.getId(), "AI 分析异常：" + e.getMessage());
+            }
+        }, threadPoolExecutor);
+
+        return ResultUtils.success(chart.getId());
+    }
+
+    //更新图表状态为‘failed’工具
+    private void updateChartError(long chartId, String message) {
+        Chart chart = new Chart();
+        chart.setId(chartId);
+        chart.setStatus("failed");
+        chart.setMessage(message);
+        boolean result = chartService.updateById(chart);
+        if(!result){
+            log.error("更新图表状态为‘failed’失败！"+chartId+message);
+        }
+    }
+
 
     /**
      * 清洗 Echarts 图表配置
