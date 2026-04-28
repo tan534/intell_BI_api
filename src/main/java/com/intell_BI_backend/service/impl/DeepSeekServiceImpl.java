@@ -25,7 +25,7 @@ public  class DeepSeekServiceImpl implements DeepSeekService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * 调用DeepSeek分析CSV数据（适配你带\n的CSV）
+     * 调用DeepSeek分析CSV数据
      * @param csvData 接口输出的CSV字符串（如"日期,用户数\n1,10\n2,20\n3,30"）
      * @return 标准JSON分析结果（适配BI前端渲染）
      */
