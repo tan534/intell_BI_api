@@ -8,7 +8,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public  class DeepSeekServiceImpl implements DeepSeekService {
-    private static final String DEEPSEEK_API_KEY = "sk-9481d67191a343dfa4848579992f8442";
+    private static final String DEEPSEEK_API_KEY = "sk-27083799015841edbdac27bde3a19e0a";
     private static final String DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
     private static final String SYSTEM_PROMPT = "你是专业智能BI数据分析师，严格按以下规则处理CSV数据：\n" +
             "1. 输入是带\\n换行的CSV字符串，第一行是表头（必须完整读取，如日期、用户数），后续是数据行，逗号分隔列\n" +

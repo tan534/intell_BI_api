@@ -275,12 +275,18 @@ public class ChartController {
         chart.setChartData(csvData);
         chart.setGenChart(genChartStr);
         chart.setGenResult(genResult);
+        chart.setStatus("processing");
         boolean result = chartService.save(chart);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图表信息保存失败！");
 
         JSONObject responseData = new JSONObject();
         responseData.put("genChartStr", genChartStr);
         responseData.put("genResult", genResult);
+
+        Chart updateChart = new Chart();
+        updateChart.setId(chart.getId());
+        updateChart.setStatus("succeed");
+        chartService.updateById(updateChart);
 
         return ResultUtils.success(responseData);
     }
